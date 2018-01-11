@@ -1,0 +1,15 @@
+{% ckan_extends %}
+
+{% block form %}
+  <div class="alert alert-error">{{ _("You're already logged in as {user}.").format(user=c.user) }} <a href="{{ logout_url }}">{{ _('Logout') }}</a>?</div>
+  <div class="form-horizontal">
+        <form action="" method="post" class="form-inline control-medium">
+          <label for="field-email">{{ _('Email') }}</label>
+          <input id="field-email  disabled" name="email" value="" type="text"  disabled/>
+            <button class="btn btn-primary disabled" type="submit" name="reset" disabled>
+          	  <i class="fa fa-icon fa-envelope-o" style="margin-right: 3px;"> </i>
+          	  {{ _("Send token") }}
+            </button>        
+        </form>
+  </div>
+{% endblock %}
