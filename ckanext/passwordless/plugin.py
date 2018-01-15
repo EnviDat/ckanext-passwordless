@@ -12,11 +12,14 @@ import ckan.lib.helpers as h
 import pylons
 import pylons.config as config
 
+from ckanext.passwordless import util 
+
 from logging import getLogger
 log = getLogger(__name__)
 
 class PasswordlessPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
+    plugins.implements(plugins.IRoutes, inherit=True)
     plugins.implements(plugins.IAuthenticator, inherit=True)
 
     # IConfigurer
@@ -25,7 +28,17 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         toolkit.add_template_directory(config_, 'templates')
         toolkit.add_public_directory(config_, 'public')
         toolkit.add_resource('fanstatic', 'passwordless')
-        
+    
+    # IRoutes
+    def before_map(self, map_):
+        map_.connect(
+            'request_reset',
+            '/user/reset',
+            controller='ckanext.passwordless.controller:PasswordlessController',
+            action = 'passwordless_request_reset'
+        )
+        return map_       
+    
     # IAuthenticator
     def login(self):
         '''Handle an attempt to login
@@ -34,28 +47,22 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         params = toolkit.request.params
         log.debug('login: params = ' + str(params))
         
-        email = params.get('email')
-        log.debug('login: email = ' + str(email))
+        token = params.get('token')
+        log.debug('login: token = ' + str(token))
+        email = token
         
         if params:
-            if not check_email(email):
+            if not util.check_email(email):
                 error_msg = _(u'Please introduce a valid mail.')
                 h.flash_error(error_msg)
             else:
-                user = get_user(email)
+                user = util.get_user(email)
                 log.debug('login: user = ' + str(user))
             
                 if not user:
-                    # A user with this email address doesn't yet exist in CKAN,
-                    # so create one.
-                    log.debug('login: create user = ' + str(email))
-                    user = toolkit.get_action('user_create')(
-                        context={'ignore_auth': True},
-                        data_dict={'email': email,
-                                   'fullname': generate_user_fullname(email),
-                                   'name': generate_user_name(email),
-                                   'password': generate_password()})
-                if user:
+                    error_msg = _(u'No user with that mail.')
+                    h.flash_error(error_msg)
+                else:
                     log.debug('login: toolkit.c = ' + str(toolkit.c))
                     log.debug('login: name = ' + str(user['name']))
                     pylons.session['ckanext-passwordless-user'] = user['name']
@@ -65,9 +72,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
                     error_msg = _(u'Successfully logged in.')
                     h.flash_success(error_msg)
                     h.redirect_to(controller='user', action='dashboard')
-                
 
-             
     def identify(self):
         '''Identify which user (if any) is logged-in 
         If a logged-in user is found, set toolkit.c.user to be their user name.
@@ -99,60 +104,6 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         self._delete_session_items()
 
 
-def get_user(email):
-    '''Return the CKAN user with the given email address.
-    :rtype: A CKAN user dict
-    '''
-    # We do this by accessing the CKAN model directly, because there isn't a
-    # way to search for users by email address using the API yet.
-    users = ckan.model.User.by_email(email)
-    
-    if users:
-        # But we need to actually return a user dict, so we need to convert it
-        # here.
-        user = users[0]
-        user_dict = toolkit.get_action('user_show')(data_dict={'id': user.id})
-        return user_dict
-    # delete, just for test
-    else:
-        user = ckan.model.User.get(email)
-        log.debug('_get_user: user.get = ' + str(user))
-        if user:
-            # But we need to actually return a user dict, so we need to convert it
-            # here.
-            user_dict = toolkit.get_action('user_show')(data_dict={'id': user.id})
-            return user_dict
-        
-    return None
-
-def generate_user_name(email):
-    '''Generate a random user name for the given email address.
-    '''
-    # FIXME: Generate a better user name, based on the email, but still making
-    # sure it's unique.
-    #return str(uuid.uuid4())
-    unique_num = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')
-    return(email.replace('@', '-').replace('.', '_') + '_' + unique_num)
 
 
-def generate_user_fullname(email):
-    '''Generate a random user name for the given email address.
-    '''
-    # FIXME: Generate a better user name, based on the email, but still making
-    # sure it's unique.
-    #return str(uuid.uuid4())
-    return(email.split('@')[0].replace('.', ' ').title())
 
-
-def generate_password():
-    '''Generate a random password.
-    '''
-    # FIXME: Replace this with a better way of generating passwords, or enable
-    # users without passwords in CKAN.
-    return str(uuid.uuid4())
-
-def check_email(email):
-    if email:
-        if re.match(r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", email):
-            return True
-    return False

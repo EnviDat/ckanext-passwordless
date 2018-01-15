@@ -1,9 +1,11 @@
 {% ckan_extends %}
 
-{% block subtitle %}{{ _('Login') }}{% endblock %}
+{% set request_reset_url = h.url_for(controller='user',action='request_reset') %}
+
+{% block subtitle %}{{ _('Passwordless Login (login)') }}{% endblock %}
 
 {% block breadcrumb_content %}
-  <li class="active">{{ h.nav_link(_('Passwordless Login'), controller='user', action='login') }}</li>
+  <li class="active">{{ h.nav_link(_('Submit Token'), controller='user', action='login') }}</li>
 {% endblock %}
 
 {% block primary_content %}
@@ -11,13 +13,12 @@
     <div class="module-content">
       <h1 class="page-heading">{% block page_heading %}{{ _('Passwordless Login') }}{% endblock %}</h1>
       {% block form %}
-        <form action="" method="post" class="form-inline control-medium">
-          <label for="field-email">{{ _('Email') }}</label>
-          <input id="field-email" name="email" value="" type="text" />
+        <form action="login" method="post" class="form-inline control-medium">
+          <label for="field-token">{{ _('Token') }}</label>
+          <input id="field-token" name="token" value="" type="text" />
           {% block form_button %}
             <button class="btn btn-primary" type="submit" name="reset">
-          	  <i class="fa fa-icon fa-envelope-o" style="margin-right: 3px;"> </i>
-          	  {{ _("Send token") }}
+          	  {{ _("Login") }}
             </button>
          {% endblock %}
         </form>
@@ -29,9 +30,10 @@
 {% block secondary_content %}
   <section class="module module-narrow module-shallow">
     {% block help_register_inner %}
-      <h2 class="module-heading">{{ _('Login without a password') }}</h2>
+      <h2 class="module-heading">{{ _('Login with a token') }}</h2>
       <div class="module-content">
-        <p>{% trans %}New log in process preventing the storage of passwords. You will get a temporary token in your mailbox.{% endtrans %}</p>
+        <p>{% trans %}New log in process preventing the storage of passwords. You can get a temporary token delivered into your mailbox {% endtrans %}</p>
+         <p class="action"><a class="btn" href="{{ request_reset_url }}">{{ _("Request token") }}</a></p>
       </div>
     {% endblock %}
   </section>
