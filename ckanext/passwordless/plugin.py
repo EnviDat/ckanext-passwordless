@@ -69,8 +69,8 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
                     log.debug('login: email = ' + str(email))
                     pylons.session['ckanext-passwordless-email'] = email
                     pylons.session.save()
-                    error_msg = _(u'Successfully logged in.')
-                    h.flash_success(error_msg)
+                    debug_msg = _(u'Successfully logged in ({username}).'.format(username=user['name']))
+                    h.flash_success(debug_msg)
                     h.redirect_to(controller='user', action='dashboard')
 
     def identify(self):
@@ -82,6 +82,8 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         if user:
             # We've found a logged-in user. Set c.user to let CKAN know.
             toolkit.c.user = user
+        else:
+            toolkit.c.user = None
     
     def _delete_session_items(self):
         import pylons
@@ -93,7 +95,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
 
     def logout(self):
         '''Handle a logout.'''
-
+        log.debug('logOUT: user = ' + str(pylons.session.get('ckanext-passwordless-user', 'None')))
         # Delete the session item, so that identify() will no longer find it.
         self._delete_session_items()
 

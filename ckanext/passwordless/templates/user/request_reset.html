@@ -1,0 +1,41 @@
+{% ckan_extends %}
+
+{% block subtitle %}{{ _('Passwordless Login (request)') }}{% endblock %}
+
+{% block breadcrumb_content %}
+  <li class="active">{{ h.nav_link(_('Passwordless Login'), controller='user', action='request_reset') }}</li>
+{% endblock %}
+
+{% block primary_content %}
+  <section class="module">
+    <div class="module-content">
+      <h1 class="page-heading">{% block page_heading %}{{ _('Passwordless Login') }}{% endblock %}</h1>
+      {% block form %}
+        <form action="" method="post" class="form-inline control-medium">
+          <label for="field-email">{{ _('Email') }}</label>
+          <input id="field-email" name="email" value="" type="text" />
+            {% if g.recaptcha_publickey %}
+                {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
+            {% endif %}
+          {% block form_button %}
+            <button class="btn btn-primary" type="submit" name="reset">
+          	  <i class="fa fa-icon fa-envelope-o" style="margin-right: 3px;"> </i>
+          	  {{ _("Request token") }}
+            </button>
+         {% endblock %}
+        </form>
+      {% endblock %}
+    </div>
+  </section>
+{% endblock %}
+
+{% block secondary_content %}
+  <section class="module module-narrow module-shallow">
+    {% block help_register_inner %}
+      <h2 class="module-heading">{{ _('Login without a password') }}</h2>
+      <div class="module-content">
+        <p>{% trans %}New log in process preventing the storage of passwords. You will get a temporary token in your mailbox.{% endtrans %}</p>
+      </div>
+    {% endblock %}
+  </section>
+{% endblock %}
