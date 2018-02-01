@@ -116,7 +116,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             return self._login_error_redirect()
 
         if not user_obj or not mailer.verify_reset_link(user_obj, key):
-            h.flash_error(_('Invalid reset key. Please try again.'))
+            h.flash_error(_('Invalid token. Please try again.'))
             log.debug('ERROR: Invalid reset key: id = {0}, key = {1}'.format(id,key))
             return self._login_error_redirect(email=email, key=key, id=id)
 

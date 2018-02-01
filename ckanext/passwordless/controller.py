@@ -44,7 +44,7 @@ class PasswordlessController(toolkit.BaseController):
         try:
             check_access('request_reset', context)
         except NotAuthorized:
-            abort(401, _('Unauthorized to request reset password.'))
+            abort(401, _('Unauthorized to request a token.'))
 
         if c.user:
             # Don't offer the reset form if already logged in
@@ -63,7 +63,7 @@ class PasswordlessController(toolkit.BaseController):
                     log.debug("PasswordlessController: passwordless_request_reset bad mail")
                     error_msg = _(u'Please introduce a valid mail.')
                     h.flash_error(error_msg)
-                    return render('user/request_reset.html')
+                    return render('user/request_reset.html', extra_vars={'email':email})
                     
                 user = util.get_user(email)
             
@@ -79,7 +79,6 @@ class PasswordlessController(toolkit.BaseController):
                     log.debug('passwordless_request_reset: requesting token for = ' + str(user.get('id')))
                     self.request_token(user.get('id'))
             h.redirect_to(controller='user', action='login', email=email)
-            #return render('user/login.html', extra_vars={})
         log.debug("PasswordlessController: passwordless_request_reset (GET)")
         return render('user/request_reset.html')
 
@@ -156,7 +155,7 @@ class PasswordlessController(toolkit.BaseController):
             try:
                 mailer.send_reset_link(user_obj)
                 h.flash_success(_('Please check your inbox for '
-                                'a access token.'))
+                                'an access token.'))
             except mailer.MailerException, e:
                 h.flash_error(_('Could not send token link: %s') %
                               unicode(e))

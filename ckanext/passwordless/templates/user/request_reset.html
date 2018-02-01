@@ -13,7 +13,7 @@
       {% block form %}
         <form action="" method="post" class="form-inline control-medium">
           <label for="field-email">{{ _('Email') }}</label>
-          <input id="field-email" name="email" value="" type="text" />
+          <input id="field-email" name="email" value="{{ email }}" type="email" />
             {% if g.recaptcha_publickey %}
                 {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
             {% endif %}

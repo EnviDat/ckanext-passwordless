@@ -15,7 +15,7 @@
       {% block form %}
         <form action="login" method="post" class="form-inline control-medium">
           <label for="field-email">{{ _('Email') }}</label>
-          <input id="field-email" name="email" value="{{ email }}" type="text" />
+          <input id="field-email" name="email" value="{{ email }}" type="email" />
           <br/>   <br/>          
           <label for="field-key">{{ _('Token') }}</label>
           <input id="field-key" name="key" value="{{ key }}" type="text" />
@@ -36,7 +36,7 @@
       <h2 class="module-heading">{{ _('Login with a token') }}</h2>
       <div class="module-content">
         <p>{% trans %}New log in process preventing the storage of passwords. You can get a temporary token delivered into your mailbox {% endtrans %}</p>
-         <p class="action"><a class="btn" href="{{ request_reset_url }}">{{ _("Request token") }}</a></p>
+         <p class="action"><a class="btn" href="{{ request_reset_url }}">{{ _("Request new token") }}</a></p>
       </div>
     {% endblock %}
   </section>
