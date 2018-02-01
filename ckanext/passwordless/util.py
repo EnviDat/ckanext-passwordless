@@ -10,19 +10,28 @@ def check_email(email):
             return True
     return False
     
-def get_user(email):
-    '''Return the CKAN user with the given email address.
-    :rtype: A CKAN user dict
+def get_user_id(email):
+    '''Return the CKAN user id with the given email address.
+    :rtype: A CKAN user id
     '''
     # We do this by accessing the CKAN model directly, because there isn't a
     # way to search for users by email address using the API yet.
     users = ckan.model.User.by_email(email)
     
     if users:
-        # But we need to actually return a user dict, so we need to convert it
-        # here.
         user = users[0]
-        user_dict = toolkit.get_action('user_show')(data_dict={'id': user.id})
+        return user.id   
+    return None
+ 
+def get_user(email):
+    '''Return the CKAN user with the given email address.
+    :rtype: A CKAN user dict
+    '''
+    
+    id = get_user_id(email)
+    
+    if id:
+        user_dict = toolkit.get_action('user_show')(data_dict={'id': id})
         return user_dict
     return None
 

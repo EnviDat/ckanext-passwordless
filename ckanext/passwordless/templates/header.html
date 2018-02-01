@@ -2,5 +2,5 @@
 
 {% block header_account_notlogged %}
 	<li>{% link_for _('Log in'), controller='user', action='request_reset' %}</li>
-	<li>{% link_for _('Submit token'), controller='user', action='login', class_='sub' %}</li>
+	<li>{% link_for _('Submit token'), controller='user', action='login' %}</li>
 {% endblock %}

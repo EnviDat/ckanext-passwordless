@@ -11,7 +11,11 @@ from logging import getLogger
 
 from ckanext.passwordless import util 
 
+import json
+
 NotAuthorized = logic.NotAuthorized
+NotFound = logic.NotFound
+
 check_access = logic.check_access
 render = base.render
 log = getLogger(__name__)
@@ -25,8 +29,9 @@ class PasswordlessController(toolkit.BaseController):
                        'auth_user_obj': c.userobj}
             check_access('site_read', context)
         except NotAuthorized:
-            if c.action not in ('passwordless_request_reset', 'passwordless_login',):
-                abort(401, _('Not authorized to see this page'))
+            if c.action not in ('passwordless_request_reset', 'passwordless_perform_reset',):
+                log.debug('ERROR: PasswordlessController: Not authorized to see this page (action={0})'.format(c.action))
+                abort(401, _('Not authorized to see this page (action)'))
 
     def passwordless_request_reset(self):
         '''
@@ -73,10 +78,24 @@ class PasswordlessController(toolkit.BaseController):
                     # token
                     log.debug('passwordless_request_reset: requesting token for = ' + str(user.get('id')))
                     self.request_token(user.get('id'))
-            return render('user/login.html', extra_vars={})
+            h.redirect_to(controller='user', action='login', email=email)
+            #return render('user/login.html', extra_vars={})
         log.debug("PasswordlessController: passwordless_request_reset (GET)")
         return render('user/request_reset.html')
 
+    def passwordless_perform_reset(self, id=None):
+        '''
+        
+        '''
+
+        key = request.params.get('key')
+
+        log.debug('passwordless_request_reset: token = ' + str(key))
+        log.debug('passwordless_request_reset: id = ' + str(id))
+   
+        h.redirect_to(controller='user', action='login',
+                       id=id, key=key)
+                       
     def _create_user(self, email):   
         data_dict =  {'email': email,
                        'fullname': util.generate_user_fullname(email),
@@ -142,3 +161,12 @@ class PasswordlessController(toolkit.BaseController):
                 h.flash_error(_('Could not send token link: %s') %
                               unicode(e))
         return
+        
+    def retry_login(self):
+        params = toolkit.request.params
+        log.debug('login: params = ' + str(params))
+        email = params.get( 'email', '')
+        key = params.get( 'key', '')
+        id = params.get( 'id', '')
+        log.debug("retry_login email='{0}', key='{1}', id='{2}'".format(email, key, id))
+        return render('user/login.html', extra_vars={'email':email, 'key':key})

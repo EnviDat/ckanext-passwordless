@@ -14,8 +14,11 @@
       <h1 class="page-heading">{% block page_heading %}{{ _('Passwordless Login') }}{% endblock %}</h1>
       {% block form %}
         <form action="login" method="post" class="form-inline control-medium">
-          <label for="field-token">{{ _('Token') }}</label>
-          <input id="field-token" name="token" value="" type="text" />
+          <label for="field-email">{{ _('Email') }}</label>
+          <input id="field-email" name="email" value="{{ email }}" type="text" />
+          <br/>   <br/>          
+          <label for="field-key">{{ _('Token') }}</label>
+          <input id="field-key" name="key" value="{{ key }}" type="text" />
           {% block form_button %}
             <button class="btn btn-primary" type="submit" name="reset">
           	  {{ _("Login") }}

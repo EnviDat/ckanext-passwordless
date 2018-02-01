@@ -5,11 +5,11 @@
 
   <fieldset>
     <legend>{{ _('Change details') }}</legend>
-    {{ form.input('name', label=_('Username'), id='field-username', value=data.name, error=errors.name, classes=['control-medium'], is_required=true, attrs={"disabled": "disabled"}) }}
+    {{ form.input('name-show', label=_('Username'), id='field-username-show', value=data.name, error=errors.name, classes=['control-medium'], is_required=true, attrs={"disabled": "disabled"}) }}
 
     {{ form.input('fullname', label=_('Full name'), id='field-fullname', value=data.fullname, error=errors.fullname, placeholder=_('eg. Joe Bloggs'), classes=['control-medium']) }}
 
-    {{ form.input('email', label=_('Email'), id='field-email', type='email', value=data.email, error=errors.email, placeholder=_('eg. joe@example.com'), classes=['control-medium'], is_required=true) }}
+    {{ form.input('email-show', label=_('Email'), id='field-email-show', type='email', value=data.email, error=errors.email, placeholder=_('eg. joe@example.com'), classes=['control-medium'], is_required=true, attrs={"disabled": "disabled"}) }}
 
     {{ form.markdown('about', label=_('About'), id='field-about', value=data.about, error=errors.about, placeholder=_('A little information about yourself')) }}
 
@@ -23,6 +23,10 @@
   </fieldset>
 
   <fieldset class="hidden" >
+    {{ form.input('name', id='field-username', value=data.name, error=errors.name, is_required=true) }}
+
+    {{ form.input('email', label=_('Email'), id='field-email', type='email', value=data.email, error=errors.email, placeholder=_('eg. joe@example.com'), classes=['control-medium'], is_required=true) }}
+
     {{ form.input('old_password', type='hidden', label='', id='field-password', value=data.oldpassword, error=errors.oldpassword, classes=['control-medium'], attrs={'autocomplete': 'off'} ) }}
 
     {{ form.input('password1', type='hidden', label='', id='field-password', value=data.password1, error=errors.password1, classes=['control-medium'], attrs={'autocomplete': 'off'} ) }}
