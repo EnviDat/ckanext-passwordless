@@ -10,6 +10,7 @@ from ckan.common import _, c, g, request, response
 from logging import getLogger
 
 from ckanext.passwordless import util 
+from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
 
 import json
 
@@ -153,7 +154,7 @@ class PasswordlessController(toolkit.BaseController):
 
         if user_obj:
             try:
-                mailer.send_reset_link(user_obj)
+                passwordless_send_reset_link(user_obj)
                 h.flash_success(_('Please check your inbox for '
                                 'an access token.'))
             except mailer.MailerException, e:

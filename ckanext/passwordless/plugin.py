@@ -16,7 +16,6 @@ import pylons
 import pylons.config as config
 
 from ckanext.passwordless import util 
-from ckanext.passwordless import controller 
 
 abort = base.abort
 
@@ -124,6 +123,9 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         log.debug('login: name = ' + str(user_dict['name']))
         pylons.session['ckanext-passwordless-user'] = user_dict['name']
         pylons.session.save()
+        #remove token
+        mailer.create_reset_key(user_obj)
+        
         debug_msg = _(u'Successfully logged in ({username}).'.format(username=user_dict['name']))
         h.flash_success(debug_msg)
         h.redirect_to(controller='user', action='dashboard')
