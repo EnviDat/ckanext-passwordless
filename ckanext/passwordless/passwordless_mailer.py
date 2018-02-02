@@ -33,6 +33,7 @@ def passwordless_get_reset_link_body(user):
         'site_title': config.get('ckan.site_title'),
         'site_url': config.get('ckan.site_url'),
         'user_name': user.name,
+        'user_fullname': user.fullname,
         'user_email': user.email,
         'key':util.get_key_from_link(reset_link)
         }
