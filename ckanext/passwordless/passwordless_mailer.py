@@ -4,7 +4,6 @@ from ckanext.passwordless import util
 import ckan.lib.mailer as mailer
 from ckan.lib.base import render_jinja2
 from ckan.common import config
-#import ckan.lib.helpers as h
 import ckan.plugins.toolkit as toolkit
 
 import logging
