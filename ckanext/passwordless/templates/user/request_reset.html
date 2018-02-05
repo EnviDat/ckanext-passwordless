@@ -1,4 +1,5 @@
 {% ckan_extends %}
+{% import 'macros/form.html' as form %}
 
 {% block subtitle %}{{ _('Passwordless Login (request)') }}{% endblock %}
 
@@ -12,17 +13,23 @@
       <h1 class="page-heading">{% block page_heading %}{{ _('Passwordless Login') }}{% endblock %}</h1>
       {% block form %}
         <form action="" method="post" class="form-inline control-medium">
-          <label for="field-email">{{ _('Email') }}</label>
-          <input id="field-email" name="email" value="{{ email }}" type="email" />
-            {% if g.recaptcha_publickey %}
-                {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
-            {% endif %}
-          {% block form_button %}
-            <button class="btn btn-primary" type="submit" name="reset">
+          <div class="control-group">
+             <label for="field-email">{{ _('Email') }}</label>
+             <input id="field-email" name="email" value="{{ email }}" type="email" />
+             {% block form_button %}
+               <button class="btn btn-primary" type="submit" name="reset">
           	  <i class="fa fa-icon fa-envelope-o" style="margin-right: 3px;"> </i>
           	  {{ _("Request token") }}
-            </button>
-         {% endblock %}
+                </button>
+             {% endblock %}
+          </div>
+
+          <div style="margin-left:-30%">
+            {% if g.recaptcha_publickey %}
+              {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
+            {% endif %}
+          </div>
+
         </form>
       {% endblock %}
     </div>
