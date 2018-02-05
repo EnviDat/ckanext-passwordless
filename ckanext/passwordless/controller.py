@@ -1,10 +1,10 @@
-import ckan.lib.base as base
 import ckan.plugins.toolkit as toolkit
 import ckan.logic as logic
 import ckan.lib.base as base
 import ckan.model as model
 import ckan.lib.helpers as h
 import ckan.lib.mailer as mailer
+import ckan.lib.captcha as captcha
 
 from ckan.common import _, c, g, request, response
 from logging import getLogger
@@ -52,9 +52,10 @@ class PasswordlessController(toolkit.BaseController):
                 return render('user/logout_first.html')
         
         if request.method == 'POST':
+
             # Get the params that were posted        
             params = toolkit.request.params
-            log.debug('passwordless_request_reset: params = ' + str(params))
+            log.debug('passwordless_request_reset (POST): params = ' + str(params))
             
             email = params.get('email')
             log.debug('passwordless_request_reset: email = ' + str(email))
@@ -63,6 +64,14 @@ class PasswordlessController(toolkit.BaseController):
                 if not util.check_email(email):
                     log.debug("PasswordlessController: passwordless_request_reset bad mail")
                     error_msg = _(u'Please introduce a valid mail.')
+                    h.flash_error(error_msg)
+                    return render('user/request_reset.html', extra_vars={'email':email})
+                    
+                # Check captcha
+                try:
+                    captcha.check_recaptcha(request)
+                except captcha.CaptchaError:
+                    error_msg = _(u'Bad Captcha. Please try again.')
                     h.flash_error(error_msg)
                     return render('user/request_reset.html', extra_vars={'email':email})
                     
