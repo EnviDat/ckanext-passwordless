@@ -172,6 +172,9 @@ class PasswordlessController(toolkit.BaseController):
         return
         
     def retry_login(self):
+        if c.user:
+            # Don't offer the reset form if already logged in
+            return render('user/logout_first.html')
         params = toolkit.request.params
         log.debug('login: params = ' + str(params))
         email = params.get( 'email', '')
