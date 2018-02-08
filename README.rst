@@ -36,14 +36,22 @@ ckanext-passwordless
    What does it do? What features does it have?
    Consider including some screenshots or embedding a video!
 
+This extension prevents the storage of passwords. Login is performed by requesting a single use token via email.
+
+.. figure:: ckanext-passwordless.png
+    :align: center
+    :alt: extension diagram
+    :figclass: align-center
+
+    Passwordless login process
+
+
 
 ------------
 Requirements
 ------------
 
-For example, you might want to mention here which versions of CKAN this
-extension works with.
-
+Developed for CKAN version 2.7.2.
 
 ------------
 Installation
