@@ -31,7 +31,6 @@ class PasswordlessController(toolkit.BaseController):
             check_access('site_read', context)
         except NotAuthorized:
             if c.action not in ('passwordless_request_reset', 'passwordless_perform_reset',):
-                log.debug('ERROR: PasswordlessController: Not authorized to see this page (action={0})'.format(c.action))
                 abort(401, _('Not authorized to see this page (action)'))
 
     def passwordless_request_reset(self):
@@ -49,7 +48,7 @@ class PasswordlessController(toolkit.BaseController):
 
         if c.user:
             # Don't offer the reset form if already logged in
-                return render('user/logout_first.html')
+            return render('user/logout_first.html')
         
         if request.method == 'POST':
 
@@ -62,7 +61,6 @@ class PasswordlessController(toolkit.BaseController):
         
             if params:
                 if not util.check_email(email):
-                    log.debug("PasswordlessController: passwordless_request_reset bad mail")
                     error_msg = _(u'Please introduce a valid mail.')
                     h.flash_error(error_msg)
                     return render('user/request_reset.html', extra_vars={'email':email})
@@ -83,13 +81,10 @@ class PasswordlessController(toolkit.BaseController):
                     user = self._create_user(email)
                     log.debug('passwordless_request_reset: created user = ' + str(email))
 
-                log.debug('passwordless_request_reset: user = ' + str(user))
                 if user:
                     # token
-                    log.debug('passwordless_request_reset: requesting token for = ' + str(user.get('id')))
                     self.request_token(user.get('id'))
             h.redirect_to(controller='user', action='login', email=email)
-        log.debug("PasswordlessController: passwordless_request_reset (GET)")
         return render('user/request_reset.html')
 
     def passwordless_perform_reset(self, id=None):
@@ -99,9 +94,6 @@ class PasswordlessController(toolkit.BaseController):
 
         key = request.params.get('key')
 
-        log.debug('passwordless_request_reset: token = ' + str(key))
-        log.debug('passwordless_request_reset: id = ' + str(id))
-   
         h.redirect_to(controller='user', action='login',
                        id=id, key=key)
                        
@@ -110,7 +102,6 @@ class PasswordlessController(toolkit.BaseController):
                        'fullname': util.generate_user_fullname(email),
                        'name': self._get_new_username(email),
                        'password': util.generate_password()}
-        log.debug("PasswordlessController: _create_user: data_dict = "+str(data_dict))                       
         user = toolkit.get_action('user_create')(
             context={'ignore_auth': True},
             data_dict=data_dict)
@@ -131,6 +122,10 @@ class PasswordlessController(toolkit.BaseController):
 
     def request_token(self, id):
 
+        if c.user:
+            # Don't offer the reset form if already logged in
+            return render('user/logout_first.html')
+        
         context = {'model': model,
                    'user': c.user}
 
@@ -171,14 +166,15 @@ class PasswordlessController(toolkit.BaseController):
                               unicode(e))
         return
         
-    def retry_login(self):
+    def passwordless_retry_login(self):
         if c.user:
             # Don't offer the reset form if already logged in
             return render('user/logout_first.html')
         params = toolkit.request.params
         log.debug('login: params = ' + str(params))
+        
         email = params.get( 'email', '')
         key = params.get( 'key', '')
         id = params.get( 'id', '')
-        log.debug("retry_login email='{0}', key='{1}', id='{2}'".format(email, key, id))
+
         return render('user/login.html', extra_vars={'email':email, 'key':key})

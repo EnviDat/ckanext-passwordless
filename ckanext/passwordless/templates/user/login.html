@@ -29,13 +29,6 @@
             {% endblock %}
           </div>
           
-                    
-          <div style="margin-left:-30%">
-            {% if g.recaptcha_publickey %}
-              {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
-            {% endif %}
-          </div>
-          
         </form>
       {% endblock %}
     </div>

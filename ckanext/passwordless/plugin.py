@@ -51,7 +51,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             '',
             '/user/retry_login',
             controller='ckanext.passwordless.controller:PasswordlessController',
-            action = 'retry_login'
+            action = 'passwordless_retry_login'
         )
         return map_       
         
@@ -73,19 +73,11 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             return self._login_error_redirect()
                 
         key = params.get('key')
-        log.debug('login: key = ' + str(key))
-        
         id = params.get('id')
-        log.debug('login: id = ' + str(id))
-
         email = params.get('email','')
-        log.debug('login: email = ' + str(email))
-
         method = toolkit.request.method
-        log.debug('login: method = ' + str(method))
         
         if email and not key:
-            log.debug('login: NO key but mail' )
             if (method == 'POST'):
                 error_msg = _(u'Login failed (reset key not provided)')
                 h.flash_error(error_msg)
@@ -97,7 +89,6 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
                    'keep_email': True}
         if not id and email:
             if not util.check_email(email):
-                log.debug("PasswordlessController: passwordless_request_reset bad mail")
                 error_msg = _(u'Login failed (email not valid)')
                 h.flash_error(error_msg)
                 return self._login_error_redirect()
@@ -110,24 +101,20 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             user_dict = logic.get_action('user_show')(context, data_dict)
             user_obj = context['user_obj']
         except logic.NotFound, e:
-            log.debug('ERROR: User not found: id = {0}'.format(id))
             h.flash_error(_('User not found'))
-            return self._login_error_redirect()
+            return self._login_error_redirect(email=email, key=key, id=id)
 
         if not user_obj or not mailer.verify_reset_link(user_obj, key):
             h.flash_error(_('Invalid token. Please try again.'))
-            log.debug('ERROR: Invalid reset key: id = {0}, key = {1}'.format(id,key))
             return self._login_error_redirect(email=email, key=key, id=id)
 
-        log.debug('login: toolkit.c = ' + str(toolkit.c))
-        log.debug('login: name = ' + str(user_dict['name']))
         pylons.session['ckanext-passwordless-user'] = user_dict['name']
         pylons.session.save()
         #remove token
         mailer.create_reset_key(user_obj)
         
-        debug_msg = _(u'Successfully logged in ({username}).'.format(username=user_dict['name']))
-        h.flash_success(debug_msg)
+        #debug_msg = _(u'Successfully logged in ({username}).'.format(username=user_dict['name']))
+        #h.flash_success(debug_msg)
         h.redirect_to(controller='user', action='dashboard')
 
     def identify(self):
@@ -152,7 +139,6 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
 
     def logout(self):
         '''Handle a logout.'''
-        log.debug('logOUT: user = ' + str(pylons.session.get('ckanext-passwordless-user', 'None')))
         # Delete the session item, so that identify() will no longer find it.
         self._delete_session_items()
 
@@ -163,9 +149,8 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         self._delete_session_items()
 
     def _login_error_redirect(self, email='', key='', id=''):
-        log.debug("_login_error_redirect email='{0}', token='{1}', id='{2}'".format(email, key, id))
         h.redirect_to(controller='ckanext.passwordless.controller:PasswordlessController', 
-                                  action='retry_login', 
+                                  action='passwordless_retry_login', 
                                   email=email, key=key, id=id)
 
 
