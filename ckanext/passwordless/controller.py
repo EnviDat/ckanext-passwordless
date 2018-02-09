@@ -91,6 +91,9 @@ class PasswordlessController(toolkit.BaseController):
         '''
         
         '''
+        if c.user:
+            # Don't offer the reset form if already logged in
+            return render('user/logout_first.html')
 
         key = request.params.get('key')
 
