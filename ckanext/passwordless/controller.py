@@ -114,6 +114,9 @@ class PasswordlessController(toolkit.BaseController):
         offset = 0
         username = util.generate_user_name(email)
         while offset<100000:
+            log.debug("***********")
+            log.debug(username)
+
             try:
                 user_dict = toolkit.get_action('user_show')(data_dict={'id': username})
             except logic.NotFound:

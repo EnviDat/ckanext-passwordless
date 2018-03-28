@@ -39,9 +39,13 @@ def generate_user_name(email, offset=0):
     '''Generate a user name for the given email address (offset should be unique).
     '''
     #unique_num = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')
-    username = email.replace('@', '-').replace('.', '_') 
+    max_len = 99
+    username = email.lower().replace('@', '-').replace('.', '_') [0:max_len]
+
     if offset>0:
-        username += '_' + str(offset)
+        str_offset = '_' + str(offset)
+        username = username[0:max_len-len(str_offset)]
+        username += str_offset
     return(username)
 
 
