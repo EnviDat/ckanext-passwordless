@@ -64,7 +64,9 @@ class PasswordlessController(toolkit.BaseController):
                     error_msg = _(u'Please introduce a valid mail.')
                     h.flash_error(error_msg)
                     return render('user/request_reset.html', extra_vars={'email':email})
-                    
+                
+                email = email.lower()
+                
                 # Check captcha
                 try:
                     captcha.check_recaptcha(request)
@@ -101,7 +103,7 @@ class PasswordlessController(toolkit.BaseController):
                        id=id, key=key)
                        
     def _create_user(self, email):   
-        data_dict =  {'email': email,
+        data_dict =  {'email': email.lower(),
                        'fullname': util.generate_user_fullname(email),
                        'name': self._get_new_username(email),
                        'password': util.generate_password()}
@@ -112,6 +114,7 @@ class PasswordlessController(toolkit.BaseController):
 
     def _get_new_username(self, email):
         offset = 0
+        email = email.lower()
         username = util.generate_user_name(email)
         while offset<100000:
             log.debug("***********")
@@ -179,7 +182,7 @@ class PasswordlessController(toolkit.BaseController):
         params = toolkit.request.params
         log.debug('login: params = ' + str(params))
         
-        email = params.get( 'email', '')
+        email = params.get( 'email', '').lower()
         key = params.get( 'key', '')
         id = params.get( 'id', '')
 

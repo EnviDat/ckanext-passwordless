@@ -14,6 +14,9 @@ def get_user_id(email):
     '''Return the CKAN user id with the given email address.
     :rtype: A CKAN user id
     '''
+    # make case insensitive
+    email = email.lower()
+
     # We do this by accessing the CKAN model directly, because there isn't a
     # way to search for users by email address using the API yet.
     users = ckan.model.User.by_email(email)
