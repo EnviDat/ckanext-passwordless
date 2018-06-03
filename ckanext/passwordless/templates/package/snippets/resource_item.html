@@ -1,0 +1,6 @@
+{% ckan_extends %}
+
+{% block resource_item_unauthorized %}
+	<a href="{{ h.url_for(controller='user', action='request_reset', came_from='/dataset/'+pkg.name) }}" >
+	{{ _('Log in') }}</a>{{ _(' to access resource')}} 
+{% endblock %}
