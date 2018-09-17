@@ -6,11 +6,24 @@ import ckan.lib.helpers as h
 import ckan.lib.mailer as mailer
 import ckan.lib.captcha as captcha
 
-from ckan.common import _, c, g, request, response
+from ckan.common import _, g, request, response
+
 from logging import getLogger
 
-from ckanext.passwordless import util 
+from ckanext.passwordless import util
 from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
+
+# CKAN 2.7
+try:
+    import pylons
+except:
+    log.debug("cannot import Pylons")
+
+# CKAN 2.8
+try:
+    import flask
+except:
+    log.debug("cannot import Flask")
 
 import json
 
@@ -19,6 +32,8 @@ NotFound = logic.NotFound
 
 check_access = logic.check_access
 render = base.render
+abort = base.abort
+
 log = getLogger(__name__)
 
 class PasswordlessController(toolkit.BaseController):
@@ -26,19 +41,92 @@ class PasswordlessController(toolkit.BaseController):
     def __before__(self, action, **env):
         base.BaseController.__before__(self, action, **env)
         try:
-            context = {'model': model, 'user': c.user or c.author,
-                       'auth_user_obj': c.userobj}
+            context = {'model': model, 'user': toolkit.c.user or toolkit.c.author,
+                       'auth_user_obj': toolkit.c.userobj}
             check_access('site_read', context)
         except NotAuthorized:
-            if c.action not in ('passwordless_request_reset', 'passwordless_perform_reset',):
+            if toolkit.c.action not in ('passwordless_user_login', 
+                                        'passwordless_request_reset', 
+                                        'passwordless_perform_reset',):
                 abort(401, _('Not authorized to see this page (action)'))
+
+    def passwordless_user_login(self):
+        log.debug(" ** PASSWORDLESS_LOGIN")
+        
+        if toolkit.c.user:
+            # Don't offer the reset form if already logged in
+            return render('user/logout_first.html')
+            
+        # Get the params that were posted to /user/login.
+        params = toolkit.request.params
+        log.debug('login: params = ' + str(params))
+        
+        # If there are no params redirect to login
+        if not params:
+            log.debug('login: NO params' )
+            return self._login_error_redirect()
+            
+        key = params.get('key')
+        id = params.get('id')
+        email = params.get('email','')
+        method = toolkit.request.method
+    
+        if email and not key:
+            if (method == 'POST'):
+                error_msg = _(u'Login failed (reset key not provided)')
+                h.flash_error(error_msg)
+            log.debug("email but no key, reload")
+            return self._login_error_redirect(email=email)
+
+        # FIXME 403 error for invalid key is a non helpful page
+        context = {'model': model, 'session': model.Session,
+                   'user': id,
+                   'keep_email': True}
+        if not id and email:
+            if not util.check_email(email):
+                error_msg = _(u'Login failed (email not valid)')
+                h.flash_error(error_msg)
+                return self._login_error_redirect()
+            id = util.get_user_id(email)
+            log.debug('login: id (email) = ' + str(id))
+    
+        user_obj = None
+        try:
+            data_dict = {'id': id}
+            user_dict = logic.get_action('user_show')(context, data_dict)
+            user_obj = context['user_obj']
+        except logic.NotFound, e:
+            h.flash_error(_('User not found'))
+            return self._login_error_redirect(email=email, key=key, id=id)
+
+        if not user_obj or not mailer.verify_reset_link(user_obj, key):
+            h.flash_error(_('Invalid token. Please try again.'))
+            return self._login_error_redirect(email=email, key=key, id=id)
+        
+        # CKAN 2.7 - 2.8
+        try:
+            pylons.session['ckanext-passwordless-user'] = user_dict['name']
+            pylons.session.save()
+        except:
+            log.debug("login: pylons session not available")
+
+            flask.session['ckanext-passwordless-user'] = user_dict['name']
+
+        #remove token
+        mailer.create_reset_key(user_obj)
+    
+        debug_msg = _(u'Successfully logged in ({username}).'.format(username=user_dict['name']))
+        h.flash_success(debug_msg)
+        toolkit.redirect_to(controller='user', action='dashboard')
 
     def passwordless_request_reset(self):
         '''
         
         '''
-        context = {'model': model, 'session': model.Session, 'user': c.user,
-                   'auth_user_obj': c.userobj}
+        log.debug(" ** REQUEST_RESET")
+
+        context = {'model': model, 'session': model.Session, 'user': toolkit.c.user,
+                   'auth_user_obj': toolkit.c.userobj}
         data_dict = {'id': request.params.get('user')}
 
         try:
@@ -46,7 +134,7 @@ class PasswordlessController(toolkit.BaseController):
         except NotAuthorized:
             abort(401, _('Unauthorized to request a token.'))
 
-        if c.user:
+        if toolkit.c.user:
             # Don't offer the reset form if already logged in
             return render('user/logout_first.html')
         
@@ -60,6 +148,7 @@ class PasswordlessController(toolkit.BaseController):
             log.debug('passwordless_request_reset: email = ' + str(email))
         
             if params:
+                # error if no mail
                 if not util.check_email(email):
                     error_msg = _(u'Please introduce a valid mail.')
                     h.flash_error(error_msg)
@@ -84,22 +173,26 @@ class PasswordlessController(toolkit.BaseController):
                     log.debug('passwordless_request_reset: created user = ' + str(email))
 
                 if user:
-                    # token
-                    self.request_token(user.get('id'))
-            h.redirect_to(controller='user', action='login', email=email)
+                    # token request
+                    self._request_token(user.get('id'))
+            
+            log.debug("controller redirecting: user.login, email =  " + str(email))
+            toolkit.redirect_to(controller='user', action='login', email=email)
+        
         return render('user/request_reset.html')
 
     def passwordless_perform_reset(self, id=None):
         '''
         
         '''
-        if c.user:
+        log.debug(" ** PERFORM_RESET")
+        if toolkit.c.user:
             # Don't offer the reset form if already logged in
             return render('user/logout_first.html')
 
         key = request.params.get('key')
 
-        h.redirect_to(controller='user', action='login',
+        toolkit.redirect_to(controller='user', action='login',
                        id=id, key=key)
                        
     def _create_user(self, email):   
@@ -117,9 +210,7 @@ class PasswordlessController(toolkit.BaseController):
         email = email.lower()
         username = util.generate_user_name(email)
         while offset<100000:
-            log.debug("***********")
             log.debug(username)
-
             try:
                 user_dict = toolkit.get_action('user_show')(data_dict={'id': username})
             except logic.NotFound:
@@ -129,14 +220,14 @@ class PasswordlessController(toolkit.BaseController):
         return None
 
 
-    def request_token(self, id):
+    def _request_token(self, id):
 
-        if c.user:
+        if toolkit.c.user:
             # Don't offer the reset form if already logged in
             return render('user/logout_first.html')
         
         context = {'model': model,
-                   'user': c.user}
+                   'user': toolkit.c.user}
 
         data_dict = {'id': id}
         user_obj = None
@@ -174,16 +265,7 @@ class PasswordlessController(toolkit.BaseController):
                 h.flash_error(_('Could not send token link: %s') %
                               unicode(e))
         return
-        
-    def passwordless_retry_login(self):
-        if c.user:
-            # Don't offer the reset form if already logged in
-            return render('user/logout_first.html')
-        params = toolkit.request.params
-        log.debug('login: params = ' + str(params))
-        
-        email = params.get( 'email', '').lower()
-        key = params.get( 'key', '')
-        id = params.get( 'id', '')
 
-        return render('user/login.html', extra_vars={'email':email, 'key':key})
+    def _login_error_redirect(self, email='', key='', id=''):
+        log.debug("rendering user/login.html")
+        return render('user/login.html', extra_vars = {'email': email, 'key':key, 'id':id})

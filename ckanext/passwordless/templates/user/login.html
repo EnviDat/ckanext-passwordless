@@ -16,11 +16,11 @@
         <form action="login" method="post" class="form-inline control-medium">
           <div class="control-group">
             <label for="field-email">{{ _('Email') }}</label>
-            <input id="field-email" name="email" value="{{ email }}" type="email" />
+            <input id="field-email" style="width:40%;padding:5px;margin-bottom:5px;" name="email" value="{{ email }}" type="email" />
           </div>
           <div class="control-group">
             <label for="field-key">{{ _('Token') }}</label>
-            <input id="field-key" name="key" value="{{ key }}" type="text" />
+            <input id="field-key" style="width:35%;padding:5px;" name="key" value="{{ key }}" type="text" />
           
             {% block form_button %}
               <button class="btn btn-primary" type="submit" name="reset">

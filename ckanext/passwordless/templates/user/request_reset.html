@@ -7,15 +7,13 @@
   <li class="active">{{ h.nav_link(_('Passwordless Login'), controller='user', action='request_reset') }}</li>
 {% endblock %}
 
-{% block primary_content %}
-  <section class="module">
-    <div class="module-content">
+{% block primary_content_inner %}
       <h1 class="page-heading">{% block page_heading %}{{ _('Passwordless Login') }}{% endblock %}</h1>
       {% block form %}
         <form action="" method="post" class="form-inline control-medium">
-          <div class="control-group">
+          <div class="form-group control-full" style="width:100%;">
              <label for="field-email">{{ _('Email') }}</label>
-             <input id="field-email" name="email" value="{{ email }}" type="email" />
+             <input id="field-email" class="control-full form-control" style="width:40%;"  name="email" value="{{ email }}" type="email" />
              {% block form_button %}
                <button class="btn btn-primary" type="submit" name="reset">
           	  <i class="fa fa-icon fa-envelope-o" style="margin-right: 3px;"> </i>
@@ -46,3 +44,4 @@
     {% endblock %}
   </section>
 {% endblock %}
+
