@@ -51,7 +51,7 @@ This extension prevents the storage of passwords. Login is performed by requesti
 Requirements
 ------------
 
-Developed for CKAN version 2.7.2.
+Developed for CKAN version 2.8 (should still work for 2.7.2, otherwise select the tag v1.0)
 
 ------------
 Installation
