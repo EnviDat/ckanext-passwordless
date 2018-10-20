@@ -52,7 +52,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         return map_       
         
     def after_map(self, map_):
-        log.debug(map_)
+        #log.debug(map_)
         return map_       
   
     # IAuthenticator
