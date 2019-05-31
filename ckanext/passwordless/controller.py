@@ -50,6 +50,13 @@ class PasswordlessController(toolkit.BaseController):
                                         'passwordless_perform_reset',):
                 abort(401, _('Not authorized to see this page (action)'))
 
+    def set_repoze_user_only(self, user_id):
+        '''Set the repoze.who cookie to match a given user_id'''
+        if 'repoze.who.plugins' in request.environ:
+            rememberer = request.environ['repoze.who.plugins']['friendlyform']
+            identity = {'repoze.who.userid': user_id}
+            response.headerlist += rememberer.remember(request.environ, identity)
+
     def passwordless_user_login(self):
         log.debug(" ** PASSWORDLESS_LOGIN")
         
@@ -98,6 +105,9 @@ class PasswordlessController(toolkit.BaseController):
         except logic.NotFound, e:
             h.flash_error(_('User not found'))
             return self._login_error_redirect(email=email, key=key, id=id)
+        except NotAuthorized:
+            h.flash_error(_('Exception (Not Authorized) email = ' + str(email) + 'id = ' + str(id)))
+            return self._login_error_redirect(email=email, key=key, id=id)
 
         if not user_obj or not mailer.verify_reset_link(user_obj, key):
             h.flash_error(_('Invalid token. Please try again.'))
@@ -117,7 +127,14 @@ class PasswordlessController(toolkit.BaseController):
     
         debug_msg = _(u'Successfully logged in ({username}).'.format(username=user_dict['name']))
         h.flash_success(debug_msg)
-        toolkit.redirect_to(controller='user', action='dashboard')
+        
+        #toolkit.redirect_to(controller='user', action='dashboard')
+        # log the user in programatically
+        #resp = h.redirect_to(u'user.me')
+        self.set_repoze_user_only(user_dict['name'])
+
+        #h.redirect_to(u'user.read', id=user_dict['name'])
+        h.redirect_to(controller='user', action='dashboard')
 
     def passwordless_request_reset(self):
         '''
