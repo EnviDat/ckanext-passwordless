@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 def passwordless_send_reset_link(user):
     mailer.create_reset_key(user)
     log.debug("passwordless_send_reset_link user = " + str(user))
+    log.debug(str(user.reset_key))
     body = passwordless_get_reset_link_body(user)
     extra_vars = {
         'site_title': config.get('ckan.site_title')
