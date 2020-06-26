@@ -104,7 +104,7 @@ class PasswordlessController(toolkit.BaseController):
             h.flash_error(_('Exception (Not Authorized): {0}'.format(e.message)))
             return self._login_error_redirect(email=email, key=key, id=user_id)
 
-        debug_msg = _(u'Successfully logged in ({username}).'.format(username=context['user_obj'].name))
+        debug_msg = _(u'Successfully logged in ({0}).'.format(context['user_obj'].name))
         h.flash_success(debug_msg)
         h.redirect_to(controller='user', action='dashboard')
 

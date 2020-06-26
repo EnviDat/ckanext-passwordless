@@ -24,6 +24,7 @@ try:
 except:
     log.debug("cannot import Flask")
 
+
 @toolkit.side_effect_free
 def perform_reset(context, data_dict):
     '''Request a passwordless login token to be sent by email.
@@ -61,6 +62,7 @@ def user_login(context, data_dict):
     result = _login(context, data_dict)
     return result
 
+
 @toolkit.side_effect_free
 def user_logout(context, data_dict):
     '''Perform the user logout.
@@ -78,26 +80,41 @@ def user_logout(context, data_dict):
     '''
 
     log.debug("Action logout: {0} ".format(data_dict))
-    user.UserController().logout()
+    log.debug("Action logout: {0} ".format(context))
+
+    user_controller = user.UserController()
+    user_controller.logout()
 
     if session.id:
-        log.debug(u'No valid session data - deleting session')
-        log.debug(u'Session: %r', session.items())
+        log.debug(u'Deleting Session: %r', session.items())
         session.delete()
 
+    # Clear flask session
     try:
         flask.session.clear()
     except:
         log.error("flask session could no be deleted")
 
+    # Clear pylons session
+    try:
+        pylons.session.clear()
+    except:
+        log.error("pylons session could no be deleted")
+
+    # check if user remains in context
     if toolkit.c.user:
-        log.warning('user could be still logged in {0}'.format(toolkit.c.user))
+        log.warning('user could be still logged in ({0})'.format(toolkit.c.user))
+
+    # check if authorization cookie remains
+    for cookie in request.cookies:
+        if cookie == u'auth_tkt':
+            log.warning("found cookie {0}, user needs to log out from UI".format(cookie))
+            raise logic.NotAuthorized("found cookie {0}, user needs to log out from UI".format(cookie))
 
     return "logout successful"
 
 
 def _reset(context, data_dict):
-
     # Check email is present
     try:
         email = data_dict['email']
@@ -132,7 +149,6 @@ def _reset(context, data_dict):
 
 
 def _login(context, data_dict):
-
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
         log.warning("User already logged in")
@@ -152,6 +168,9 @@ def _login(context, data_dict):
         raise toolkit.ValidationError({'key': 'missing key'})
 
     log.debug('login: {0} ({1})'.format(user_id, key))
+
+    # get whether to return context (UI) or just a message (API)
+    return_context = data_dict.get('return_context', False)
 
     try:
         data_dict = {'id': user_id}
@@ -180,13 +199,13 @@ def _login(context, data_dict):
     # remove token
     mailer.create_reset_key(user_obj)
 
-    # log the user in programatically
+    # log the user in programmatically
     try:
         _set_repoze_user_only(user_dict['name'])
     except TypeError as e:
         log.warning("Exception at login: {0}".format(e))
 
-    if (data_dict.get('return_context', False)):
+    if return_context:
         return context
     else:
         return "login success"
@@ -219,7 +238,6 @@ def _get_new_username(email):
 
 
 def _request_token(user_id):
-
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
         log.warning("User already logged in {}".format(toolkit.c.user))
@@ -271,4 +289,3 @@ def _set_repoze_user_only(user_id):
         identity = {'repoze.who.userid': user_id}
         response.headerlist += rememberer.remember(request.environ, identity)
         log.debug("cookie set")
-
