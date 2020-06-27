@@ -8,7 +8,9 @@ from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_lin
 from ckan.common import request, response, session, g
 from logging import getLogger
 
-import requests
+from ckan.lib.redis import connect_to_redis
+from datetime import datetime, timedelta
+import dateutil.parser
 
 log = getLogger(__name__)
 
@@ -115,6 +117,12 @@ def user_logout(context, data_dict):
 
 
 def _reset(context, data_dict):
+
+    # No one is logged in already
+    if toolkit.c.user:
+        log.warning("User already logged in {}".format(toolkit.c.user))
+        raise toolkit.NotAuthorized('user already logged in, logout first')
+
     # Check email is present
     try:
         email = data_dict['email']
@@ -125,6 +133,31 @@ def _reset(context, data_dict):
     # Check email is valid
     if not util.check_email(email):
         raise toolkit.ValidationError({'email': 'invalid email'})
+
+    # control attempts
+    redis_conn = connect_to_redis()
+    if email not in redis_conn.keys():
+        log.debug("Redis: first login attempt for {0}".format(email))
+        redis_conn.hmset(email, {'attempts': 1, 'latest': datetime.now().isoformat()})
+    else:
+        base = 3
+        attempts = int(redis_conn.hmget(email, 'attempts')[0])
+        latest = dateutil.parser.parse(redis_conn.hmget(email, 'latest')[0])
+
+        waiting_seconds = base ** attempts
+        limit_date = latest + timedelta(seconds=waiting_seconds)
+
+        log.debug('Redis: wait {0} seconds after {1} attempts => after date {2}'.format(waiting_seconds, attempts,
+                                                                               limit_date.isoformat()))
+
+        if limit_date > datetime.now():
+            raise logic.NotAuthorized("User should wait {0} seconds till {1} a new reset attempt".format(
+                int((limit_date-datetime.now()).total_seconds()),
+                limit_date.isoformat()))
+        else:
+            # increase counter
+            redis_conn.hmset(email, {'attempts': attempts + 1, 'latest': datetime.now().isoformat()})
+
 
     # get existing user from email
     user = util.get_user(email)
@@ -149,6 +182,7 @@ def _reset(context, data_dict):
 
 
 def _login(context, data_dict):
+
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
         log.warning("User already logged in")
@@ -176,14 +210,11 @@ def _login(context, data_dict):
         data_dict = {'id': user_id}
         user_dict = logic.get_action('user_show')(context, data_dict)
         user_obj = context['user_obj']
-        email = user_dict.get('email')
+        email = user_dict.get('email', user_obj.email)
     except logic.NotFound:
         raise logic.NotFound('"%s" matched several users' % user_id)
     except toolkit.NotAuthorized:
         raise toolkit.NotAuthorized('Exception (Not Authorized) email = ' + str(email) + 'id = ' + str(user_id))
-
-    log.debug(user_dict)
-    log.debug(user_obj)
 
     if not user_obj or not mailer.verify_reset_link(user_obj, key):
         raise toolkit.NotAuthorized('Invalid token. Please try again.')
@@ -205,6 +236,12 @@ def _login(context, data_dict):
     except TypeError as e:
         log.warning("Exception at login: {0}".format(e))
 
+    # delete attempts from Redis
+    log.debug("Redis: reset attempts for {0}".format(email))
+    redis_conn = connect_to_redis()
+    redis_conn.delete(email)
+
+    # return message or context
     if return_context:
         return context
     else:
