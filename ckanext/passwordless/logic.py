@@ -151,9 +151,9 @@ def _reset(context, data_dict):
                                                                                limit_date.isoformat()))
 
         if limit_date > datetime.now():
-            raise logic.NotAuthorized("User should wait {0} seconds till {1} a new reset attempt".format(
+            raise logic.ValidationError({'user': "User should wait {0} seconds till {1} a new reset attempt".format(
                 int((limit_date-datetime.now()).total_seconds()),
-                limit_date.isoformat()))
+                limit_date.isoformat())})
         else:
             # increase counter
             redis_conn.hmset(email, {'attempts': attempts + 1, 'latest': datetime.now().isoformat()})
