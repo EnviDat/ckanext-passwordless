@@ -245,7 +245,11 @@ def _login(context, data_dict):
     if return_context:
         return context
     else:
-        return "login success"
+        user_obj = context.get('user_obj', None)
+        result_json = {'user': {'email': user_obj.email, 'id': user_obj.id, 'name': user_obj.name,
+                                'apikey': user_obj.apikey, 'fullname': user_obj.fullname},
+                                'message': "login success"}
+        return result_json
 
 
 def _create_user(email):
@@ -314,7 +318,7 @@ def _request_token(user_id):
 
         except mailer.MailerException, e:
             log.error('Could not send token link: %s' % unicode(e))
-            raise mailer.MailerException
+            raise mailer.MailerException('Could not send token link by mail: %s' % unicode(e))
 
     return
 
