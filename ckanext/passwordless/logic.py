@@ -81,9 +81,6 @@ def user_logout(context, data_dict):
     :rtype: string
     '''
 
-    log.debug("Action logout: {0} ".format(data_dict))
-    log.debug("Action logout: {0} ".format(context))
-
     user_controller = user.UserController()
     user_controller.logout()
 
@@ -134,30 +131,8 @@ def _reset(context, data_dict):
     if not util.check_email(email):
         raise toolkit.ValidationError({'email': 'invalid email'})
 
-    # control attempts
-    redis_conn = connect_to_redis()
-    if email not in redis_conn.keys():
-        log.debug("Redis: first login attempt for {0}".format(email))
-        redis_conn.hmset(email, {'attempts': 1, 'latest': datetime.now().isoformat()})
-    else:
-        base = 3
-        attempts = int(redis_conn.hmget(email, 'attempts')[0])
-        latest = dateutil.parser.parse(redis_conn.hmget(email, 'latest')[0])
-
-        waiting_seconds = base ** attempts
-        limit_date = latest + timedelta(seconds=waiting_seconds)
-
-        log.debug('Redis: wait {0} seconds after {1} attempts => after date {2}'.format(waiting_seconds, attempts,
-                                                                               limit_date.isoformat()))
-
-        if limit_date > datetime.now():
-            raise logic.ValidationError({'user': "User should wait {0} seconds till {1} a new reset attempt".format(
-                int((limit_date-datetime.now()).total_seconds()),
-                limit_date.isoformat())})
-        else:
-            # increase counter
-            redis_conn.hmset(email, {'attempts': attempts + 1, 'latest': datetime.now().isoformat()})
-
+    # control attempts (exception raised on fail)
+    _check_reset_attempts(email)
 
     # get existing user from email
     user = util.get_user(email)
@@ -171,7 +146,7 @@ def _reset(context, data_dict):
     if user:
         # make sure is not deleted
         if user.get('state') == 'deleted':
-            raise toolkit.ValidationError({'user': 'user with email {0} was deleted, contact an admin'.format(email)})
+            raise toolkit.ValidationError({'user': 'user with email {0} was deleted'.format(email)})
         # token request
         _request_token(user.get('id'))
     else:
@@ -179,7 +154,6 @@ def _reset(context, data_dict):
 
     log.debug("controller redirecting: user.login, email =  " + str(email))
     return "reset successful"
-
 
 def _login(context, data_dict):
 
@@ -193,13 +167,19 @@ def _login(context, data_dict):
         user_id = data_dict.get('id')
         if not user_id:
             email = data_dict['email'].lower()
+            # Check email is valid
+            if not util.check_email(email):
+                raise toolkit.ValidationError({'email': 'invalid email'})
+            # get the user id
             user_id = util.get_user_id(email)
+            if not user_id:
+                raise toolkit.ValidationError({'email': 'email does not correspond to a registered user'})
     except KeyError:
-        raise toolkit.ValidationError({'email': 'missing email or id'})
+        raise toolkit.ValidationError({'email': 'missing email'})
     try:
         key = data_dict['key']
     except KeyError:
-        raise toolkit.ValidationError({'key': 'missing key'})
+        raise toolkit.ValidationError({'key': 'missing token'})
 
     log.debug('login: {0} ({1})'.format(user_id, key))
 
@@ -217,7 +197,7 @@ def _login(context, data_dict):
         raise toolkit.NotAuthorized('Exception (Not Authorized) email = ' + str(email) + 'id = ' + str(user_id))
 
     if not user_obj or not mailer.verify_reset_link(user_obj, key):
-        raise toolkit.NotAuthorized('Invalid token. Please try again.')
+        raise toolkit.ValidationError({'key': 'token provided is not valid'})
 
     # CKAN 2.7 - 2.8
     try:
@@ -318,7 +298,7 @@ def _request_token(user_id):
 
         except mailer.MailerException, e:
             log.error('Could not send token link: %s' % unicode(e))
-            raise mailer.MailerException('Could not send token link by mail: %s' % unicode(e))
+            raise mailer.MailerException('could not send token link by mail: %s' % unicode(e))
 
     return
 
@@ -330,3 +310,28 @@ def _set_repoze_user_only(user_id):
         identity = {'repoze.who.userid': user_id}
         response.headerlist += rememberer.remember(request.environ, identity)
         log.debug("cookie set")
+
+
+def _check_reset_attempts(email):
+    redis_conn = connect_to_redis()
+    if email not in redis_conn.keys():
+        log.debug("Redis: first login attempt for {0}".format(email))
+        redis_conn.hmset(email, {'attempts': 1, 'latest': datetime.now().isoformat()})
+    else:
+        base = 3
+        attempts = int(redis_conn.hmget(email, 'attempts')[0])
+        latest = dateutil.parser.parse(redis_conn.hmget(email, 'latest')[0])
+
+        waiting_seconds = base ** attempts
+        limit_date = latest + timedelta(seconds=waiting_seconds)
+
+        log.debug('Redis: wait {0} seconds after {1} attempts => after date {2}'.format(waiting_seconds, attempts,
+                                                                               limit_date.isoformat()))
+
+        if limit_date > datetime.now():
+            raise logic.ValidationError({'user': "User should wait {0} seconds till {1} for a new token request".format(
+                int((limit_date-datetime.now()).total_seconds()),
+                limit_date.isoformat())})
+        else:
+            # increase counter
+            redis_conn.hmset(email, {'attempts': attempts + 1, 'latest': datetime.now().isoformat()})
