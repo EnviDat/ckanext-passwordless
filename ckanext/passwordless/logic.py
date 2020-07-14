@@ -2,11 +2,14 @@ import ckan.plugins.toolkit as toolkit
 import ckan.logic as logic
 import ckan.lib.mailer as mailer
 import ckan.controllers.user as user
+from ckan.lib.navl.dictization_functions import DataError
 
 from ckanext.passwordless import util
 from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
 from ckan.common import request, response, session, g
 from logging import getLogger
+
+import sqlalchemy
 
 from ckan.lib.redis import connect_to_redis
 from datetime import datetime, timedelta
@@ -136,6 +139,7 @@ def _reset(context, data_dict):
 
     # get existing user from email
     user = util.get_user(email)
+    log.debug('passwordless_request_reset: USER is = ' + str(user))
 
     if not user:
         # A user with this email address doesn't yet exist in CKAN,
@@ -233,13 +237,25 @@ def _login(context, data_dict):
 
 
 def _create_user(email):
-    data_dict = {'email': email.lower(),
-                 'fullname': util.generate_user_fullname(email),
-                 'name': _get_new_username(email),
-                 'password': util.generate_password()}
-    user = toolkit.get_action('user_create')(
-        context={'ignore_auth': True},
-        data_dict=data_dict)
+    # first check temporary quota
+    _check_new_user_quota()
+
+    try:
+        data_dict = {'email': email.lower(),
+                     'fullname': util.generate_user_fullname(email),
+                     'name': _get_new_username(email),
+                     'password': util.generate_password()}
+        user = toolkit.get_action('user_create')(
+            context={'ignore_auth': True},
+            data_dict=data_dict)
+    except sqlalchemy.exc.InternalError as error:
+        exception_message = "{0}".format(error)
+        log.error("failed to create user: {0}".format(error))
+        if exception_message.find("trg_new_user_quota_check") >= 0:
+            raise DataError("error creating a new user, daily new user quota exceeded")
+        else:
+            raise DataError("internal error creating a new user")
+
     return user
 
 
@@ -335,3 +351,38 @@ def _check_reset_attempts(email):
         else:
             # increase counter
             redis_conn.hmset(email, {'attempts': attempts + 1, 'latest': datetime.now().isoformat()})
+
+
+def _check_new_user_quota():
+    redis_conn = connect_to_redis()
+    new_users_list = 'new_latest_users'
+    if 'new_latest_users' not in redis_conn.keys():
+        redis_conn.lpush(new_users_list, datetime.now().isoformat())
+    else:
+        # TODO: read this rom config
+        max = 10
+        period = 60 * 10
+        begin_date = datetime.now() - timedelta(seconds=period)
+
+        count = 0
+        elements_to_remove = []
+
+        for i in range(0, redis_conn.llen(new_users_list)):
+            log.debug(redis_conn.lindex(new_users_list, i))
+            value = redis_conn.lindex(new_users_list, i)
+            new_user_creation_date = dateutil.parser.parse(value)
+            if new_user_creation_date >= begin_date:
+                count += 1
+            else:
+                elements_to_remove += [value]
+
+        for value in elements_to_remove:
+            redis_conn.lrem(new_users_list, value)
+
+        if count >= max:
+            log.error("new user temporary quota exceeded ({0})".format(count))
+            raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new request".format(
+                period/60)})
+        else:
+            # add new user creation
+            redis_conn.lpush(new_users_list, datetime.now().isoformat())
