@@ -251,7 +251,7 @@ def _create_user(email):
     except sqlalchemy.exc.InternalError as error:
         exception_message = "{0}".format(error)
         log.error("failed to create user: {0}".format(error))
-        if exception_message.find("trg_new_user_quota_check") >= 0:
+        if exception_message.find("quota") >= 0:
             raise DataError("error creating a new user, daily new user quota exceeded")
         else:
             raise DataError("internal error creating a new user")
