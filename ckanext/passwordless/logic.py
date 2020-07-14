@@ -368,7 +368,6 @@ def _check_new_user_quota():
         elements_to_remove = []
 
         for i in range(0, redis_conn.llen(new_users_list)):
-            log.debug(redis_conn.lindex(new_users_list, i))
             value = redis_conn.lindex(new_users_list, i)
             new_user_creation_date = dateutil.parser.parse(value)
             if new_user_creation_date >= begin_date:
