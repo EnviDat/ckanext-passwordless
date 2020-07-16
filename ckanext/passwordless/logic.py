@@ -117,7 +117,6 @@ def user_logout(context, data_dict):
 
 
 def _reset(context, data_dict):
-
     # No one is logged in already
     if toolkit.c.user:
         log.warning("User already logged in {}".format(toolkit.c.user))
@@ -159,8 +158,8 @@ def _reset(context, data_dict):
     log.debug("controller redirecting: user.login, email =  " + str(email))
     return "reset successful"
 
-def _login(context, data_dict):
 
+def _login(context, data_dict):
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
         log.warning("User already logged in")
@@ -232,7 +231,7 @@ def _login(context, data_dict):
         user_obj = context.get('user_obj', None)
         result_json = {'user': {'email': user_obj.email, 'id': user_obj.id, 'name': user_obj.name,
                                 'apikey': user_obj.apikey, 'fullname': user_obj.fullname},
-                                'message': "login success"}
+                       'message': "login success"}
         return result_json
 
 
@@ -342,11 +341,11 @@ def _check_reset_attempts(email):
         limit_date = latest + timedelta(seconds=waiting_seconds)
 
         log.debug('Redis: wait {0} seconds after {1} attempts => after date {2}'.format(waiting_seconds, attempts,
-                                                                               limit_date.isoformat()))
+                                                                                        limit_date.isoformat()))
 
         if limit_date > datetime.now():
             raise logic.ValidationError({'user': "User should wait {0} seconds till {1} for a new token request".format(
-                int((limit_date-datetime.now()).total_seconds()),
+                int((limit_date - datetime.now()).total_seconds()),
                 limit_date.isoformat())})
         else:
             # increase counter
@@ -381,7 +380,7 @@ def _check_new_user_quota():
         if count >= max_new_users:
             log.error("new user temporary quota exceeded ({0})".format(count))
             raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new \
-                                                  request".format(period/60)})
+                                                  request".format(period / 60)})
         else:
             # add new user creation
             redis_conn.lpush(new_users_list, datetime.now().isoformat())
