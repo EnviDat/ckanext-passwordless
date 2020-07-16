@@ -360,7 +360,7 @@ def _check_new_user_quota():
         redis_conn.lpush(new_users_list, datetime.now().isoformat())
     else:
         # TODO: read this rom config
-        max = 10
+        max_new_users = 10
         period = 60 * 10
         begin_date = datetime.now() - timedelta(seconds=period)
 
@@ -378,10 +378,10 @@ def _check_new_user_quota():
         for value in elements_to_remove:
             redis_conn.lrem(new_users_list, value)
 
-        if count >= max:
+        if count >= max_new_users:
             log.error("new user temporary quota exceeded ({0})".format(count))
-            raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new request".format(
-                period/60)})
+            raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new \
+                                                  request".format(period/60)})
         else:
             # add new user creation
             redis_conn.lpush(new_users_list, datetime.now().isoformat())
