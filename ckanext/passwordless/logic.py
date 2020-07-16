@@ -379,8 +379,8 @@ def _check_new_user_quota():
 
         if count >= max_new_users:
             log.error("new user temporary quota exceeded ({0})".format(count))
-            raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new \
-                                                  request".format(period / 60)})
+            raise logic.ValidationError({'user': "new user temporary quota exceeded, wait {0} minutes for a new request"
+                                        .format(period / 60)})
         else:
             # add new user creation
             redis_conn.lpush(new_users_list, datetime.now().isoformat())
