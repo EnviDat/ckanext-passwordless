@@ -10,21 +10,11 @@ from ckanext.passwordless import util
 
 from ckan.common import _, request, response
 
+import flask
+
 from logging import getLogger
 
 log = getLogger(__name__)
-
-# CKAN 2.7
-try:
-    import pylons
-except:
-    log.debug("cannot import Pylons")
-
-# CKAN 2.8
-try:
-    import flask
-except:
-    log.debug("cannot import Flask")
 
 NotAuthorized = logic.NotAuthorized
 NotFound = logic.NotFound
@@ -60,7 +50,7 @@ class PasswordlessController(toolkit.BaseController):
         params = toolkit.request.params
         log.debug('login: params = ' + str(params))
 
-         # If there are no params redirect to login
+        # If there are no params redirect to login
         if not params:
             log.debug('login: NO params')
             return self._login_error_redirect()
@@ -71,7 +61,7 @@ class PasswordlessController(toolkit.BaseController):
         method = toolkit.request.method
 
         if email and not key:
-            if (method == 'POST'):
+            if method == 'POST':
                 error_msg = _(u'Login failed (reset key not provided)')
                 h.flash_error(error_msg)
             log.debug("email but no key, reload")
@@ -178,9 +168,6 @@ class PasswordlessController(toolkit.BaseController):
         return render('user/request_reset.html')
 
     def passwordless_perform_reset(self, id=None):
-        '''
-        
-        '''
         log.debug(" ** PERFORM_RESET")
         if toolkit.c.user:
             # Don't offer the reset form if already logged in

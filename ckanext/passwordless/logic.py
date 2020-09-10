@@ -1,15 +1,16 @@
 import ckan.plugins.toolkit as toolkit
 import ckan.logic as logic
 import ckan.lib.mailer as mailer
-import ckan.controllers.user as user
+import ckan.views.user as user
 from ckan.lib.navl.dictization_functions import DataError
 
 from ckanext.passwordless import util
 from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
-from ckan.common import request, response, session, g
+from ckan.common import request, session, g
 from logging import getLogger
 
 import sqlalchemy
+import flask
 
 from ckan.lib.redis import connect_to_redis
 from datetime import datetime, timedelta
@@ -17,22 +18,10 @@ import dateutil.parser
 
 log = getLogger(__name__)
 
-# CKAN 2.7
-try:
-    import pylons
-except:
-    log.debug("cannot import Pylons")
-
-# CKAN 2.8
-try:
-    import flask
-except:
-    log.debug("cannot import Flask")
-
 
 @toolkit.side_effect_free
 def perform_reset(context, data_dict):
-    '''Request a passwordless login token to be sent by email.
+    """Request a passwordless login token to be sent by email.
 
     :param email: the user email
     :type email: string
@@ -40,7 +29,7 @@ def perform_reset(context, data_dict):
 
     :returns: success
     :rtype: string
-    '''
+    """
 
     log.debug("Action reset: {0} ".format(data_dict))
     result = _reset(context, data_dict)
@@ -49,7 +38,7 @@ def perform_reset(context, data_dict):
 
 @toolkit.side_effect_free
 def user_login(context, data_dict):
-    '''Perform the user login.
+    """Perform the user login.
 
     :param email: the user email
     :type email: string
@@ -61,7 +50,7 @@ def user_login(context, data_dict):
 
     :returns: success
     :rtype: string
-    '''
+    """
 
     log.debug("Action login: {0} ".format(data_dict))
     result = _login(context, data_dict)
@@ -70,7 +59,7 @@ def user_login(context, data_dict):
 
 @toolkit.side_effect_free
 def user_logout(context, data_dict):
-    '''Perform the user logout.
+    """Perform the user logout.
 
     :param email: the user email
     :type email: string
@@ -82,7 +71,7 @@ def user_logout(context, data_dict):
 
     :returns: success
     :rtype: string
-    '''
+    """
 
     user_controller = user.UserController()
     user_controller.logout()
@@ -96,12 +85,6 @@ def user_logout(context, data_dict):
         flask.session.clear()
     except:
         log.error("flask session could no be deleted")
-
-    # Clear pylons session
-    try:
-        pylons.session.clear()
-    except:
-        log.error("pylons session could no be deleted")
 
     # check if user remains in context
     if toolkit.c.user:
@@ -202,13 +185,7 @@ def _login(context, data_dict):
     if not user_obj or not mailer.verify_reset_link(user_obj, key):
         raise toolkit.ValidationError({'key': 'token provided is not valid'})
 
-    # CKAN 2.7 - 2.8
-    try:
-        pylons.session['ckanext-passwordless-user'] = user_dict['name']
-        pylons.session.save()
-    except:
-        log.debug("login: pylons session not available")
-        flask.session['ckanext-passwordless-user'] = user_dict['name']
+    flask.session['ckanext-passwordless-user'] = user_dict['name']
 
     # remove token
     mailer.create_reset_key(user_obj)
@@ -311,15 +288,15 @@ def _request_token(user_id):
         try:
             passwordless_send_reset_link(user_obj)
 
-        except mailer.MailerException, e:
-            log.error('Could not send token link: %s' % unicode(e))
-            raise mailer.MailerException('could not send token link by mail: %s' % unicode(e))
+        except mailer.MailerException as e:
+            log.error('Could not send token link: %s' % str(e))
+            raise mailer.MailerException('could not send token link by mail: %s' % str(e))
 
     return
 
 
 def _set_repoze_user_only(user_id):
-    '''Set the repoze.who cookie to match a given user_id'''
+    """Set the repoze.who cookie to match a given user_id"""
     if 'repoze.who.plugins' in request.environ:
         rememberer = request.environ['repoze.who.plugins']['friendlyform']
         identity = {'repoze.who.userid': user_id}

@@ -2,21 +2,11 @@ import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 import ckanext.passwordless.logic
 
+import flask
+
 from logging import getLogger
 
 log = getLogger(__name__)
-
-# CKAN 2.7
-try:
-    import pylons
-except:
-    log.debug("cannot import Pylons")
-
-# CKAN 2.8
-try:
-    import flask
-except:
-    log.debug("cannot import Flask")
 
 
 class PasswordlessPlugin(plugins.SingletonPlugin):
@@ -29,7 +19,6 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
     def update_config(self, config_):
         toolkit.add_template_directory(config_, 'templates')
         toolkit.add_public_directory(config_, 'public')
-        toolkit.add_resource('fanstatic', 'passwordless')
 
     # IRoutes
     def before_map(self, map_):
@@ -58,20 +47,15 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         return map_
 
     # IAuthenticator
-
     def identify(self):
-        '''Identify which user (if any) is logged-in 
+        """Identify which user (if any) is logged-in 
         If a logged-in user is found, set toolkit.c.user to be their user name.
-        '''
+        """
 
         user = None
 
         # Try to get the item that login() placed in the session.
-        # CKAN 2.7 pylons -> 2.8 flask
-        try:
-            user = pylons.session.get('ckanext-passwordless-user')
-        except:
-            user = flask.session.get('ckanext-passwordless-user')
+        user = flask.session.get('ckanext-passwordless-user')
 
         if user:
             # We've found a logged-in user. Set c.user to let CKAN know.
@@ -82,20 +66,10 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             toolkit.c.user = None
 
     def _delete_session_items(self):
-        try:
-            if 'ckanext-passwordless-user' in pylons.session:
-                del pylons.session['ckanext-passwordless-user']
-            if 'ckanext-passwordless-email' in pylons.session:
-                del pylons.session['ckanext-passwordless-email']
-            pylons.session.save()
-        except:
-            log.debug("pylons session not available for delete")
-
-            if 'ckanext-passwordless-user' in flask.session:
-                del flask.session['ckanext-passwordless-user']
-            if 'ckanext-passwordless-email' in flask.session:
-                del flask.session['ckanext-passwordless-email']
-
+        if 'ckanext-passwordless-user' in flask.session:
+            del flask.session['ckanext-passwordless-user']
+        if 'ckanext-passwordless-email' in flask.session:
+            del flask.session['ckanext-passwordless-email']
 
     def logout(self):
         """Handle a logout."""

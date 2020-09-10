@@ -9,6 +9,7 @@ import ckan.plugins.toolkit as toolkit
 import logging
 log = logging.getLogger(__name__)
 
+
 def passwordless_send_reset_link(user):
     mailer.create_reset_key(user)
     log.debug("passwordless_send_reset_link user = " + str(user))
