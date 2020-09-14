@@ -8,7 +8,7 @@ import ckan.lib.captcha as captcha
 
 from ckanext.passwordless import util
 
-from ckan.common import _, request, g
+from ckan.common import _, request, g, config
 from flask import Blueprint
 import flask
 
@@ -51,9 +51,22 @@ def get_blueprints(name, module):
 
     return blueprint
 
+def before_request():
+    try:
+        context = dict(model=model, user=g.user, auth_user_obj=g.userobj)
+        logic.check_access(u'site_read', context)
+    except logic.NotAuthorized:
+        blueprint, action = plugins.toolkit.get_endpoint()
+        if action not in (
+                u'login',
+                u'request_reset',
+                u'perform_reset',
+        ):
+            base.abort(403, _(u'Not authorized to see this page'))
 
 def passwordless_user_login():
     log.debug(" ** PASSWORDLESS_LOGIN")
+    before_request()
 
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
@@ -126,7 +139,7 @@ def passwordless_user_login():
 
     debug_msg = _(u'Successfully logged in ({0}).'.format(context['user_obj'].name))
     h.flash_success(debug_msg)
-    return toolkit.h.redirect_to('dashboard.index')
+    return toolkit.h.redirect_to(config.get(u'ckan.route_after_login', u'dashboard.index'))
 
 
 def passwordless_request_reset():
@@ -134,6 +147,8 @@ def passwordless_request_reset():
     Request a new user token
     '''
     log.debug(" ** REQUEST_RESET")
+
+    before_request()
 
     context = {'model': model, 'session': model.Session, 'user': g.user,
                'auth_user_obj': toolkit.c.userobj}
@@ -200,6 +215,8 @@ def passwordless_request_reset():
 
 
 def passwordless_perform_reset(id=None):
+    before_request()
+
     log.debug(" ** PERFORM_RESET id = {0}".format(id))
     if toolkit.c.user:
         # Don't offer the reset form if already logged in
