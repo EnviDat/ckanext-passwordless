@@ -71,11 +71,3 @@ def generate_password():
     # FIXME: Replace this with a better way of generating passwords, or enable
     # users without passwords in CKAN.
     return str(uuid.uuid4())
-
-
-def get_key_from_link(link):
-    key = ''
-    link_split = link.strip().rsplit('key=', 1)
-    if len(link_split) > 1:
-        key = link_split[1]
-    return key

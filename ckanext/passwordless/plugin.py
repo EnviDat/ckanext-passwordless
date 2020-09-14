@@ -1,6 +1,7 @@
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 import ckanext.passwordless.logic
+import ckanext.passwordless.blueprints as blueprints
 
 import flask
 
@@ -12,35 +13,13 @@ log = getLogger(__name__)
 class PasswordlessPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.IConfigurer)
-    plugins.implements(plugins.IRoutes, inherit=True)
     plugins.implements(plugins.IAuthenticator, inherit=True)
+    plugins.implements(plugins.IBlueprint, inherit=True)
 
     # IConfigurer
     def update_config(self, config_):
         toolkit.add_template_directory(config_, 'templates')
         toolkit.add_public_directory(config_, 'public')
-
-    # IRoutes
-    def before_map(self, map_):
-        map_.connect(
-            'login',
-            '/user/login',
-            controller='ckanext.passwordless.controller:PasswordlessController',
-            action='passwordless_user_login'
-        )
-        map_.connect(
-            'request_reset',
-            '/user/reset',
-            controller='ckanext.passwordless.controller:PasswordlessController',
-            action='passwordless_request_reset'
-        )
-        map_.connect(
-            '',
-            '/user/reset/{id:.*}',
-            controller='ckanext.passwordless.controller:PasswordlessController',
-            action='passwordless_perform_reset'
-        )
-        return map_
 
     def after_map(self, map_):
         # log.debug(map_)
@@ -93,3 +72,7 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
             'passwordless_user_logout':
                 ckanext.passwordless.logic.user_logout
         }
+
+    # IBlueprint
+    def get_blueprint(self):
+        return blueprints.get_blueprints(self.name, self.__module__)

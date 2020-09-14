@@ -3,6 +3,7 @@ import ckan.logic as logic
 import ckan.lib.mailer as mailer
 import ckan.views.user as user
 from ckan.lib.navl.dictization_functions import DataError
+import ckan.lib.helpers as h
 
 from ckanext.passwordless import util
 from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
@@ -121,7 +122,7 @@ def _reset(context, data_dict):
 
     # get existing user from email
     user = util.get_user(email)
-    log.debug('passwordless_request_reset: USER is = ' + str(user))
+    # log.debug('passwordless_request_reset: USER is = ' + str(user))
 
     if not user:
         # A user with this email address doesn't yet exist in CKAN,
@@ -300,9 +301,9 @@ def _set_repoze_user_only(user_id):
     if 'repoze.who.plugins' in request.environ:
         rememberer = request.environ['repoze.who.plugins']['friendlyform']
         identity = {'repoze.who.userid': user_id}
-        response.headerlist += rememberer.remember(request.environ, identity)
+        resp = h.redirect_to(u'user.me')
+        resp.headers.extend(rememberer.remember(request.environ, identity))
         log.debug("cookie set")
-
 
 def _check_reset_attempts(email):
     redis_conn = connect_to_redis()
