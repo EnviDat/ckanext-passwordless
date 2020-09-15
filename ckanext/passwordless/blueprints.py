@@ -123,7 +123,6 @@ def passwordless_user_login():
             context,
             {'email': email, 'key': key, 'id': user_id, 'return_context': True}
         )
-        log.debug(context)
     except logic.NotFound as e:
         h.flash_error(_('User not found, exception: {0}'.format(e.message)))
         return _login_error_redirect(email=email, key=key, id=user_id)

@@ -74,8 +74,7 @@ def user_logout(context, data_dict):
     :rtype: string
     """
 
-    user_controller = user.UserController()
-    user_controller.logout()
+    user.logout()
 
     if session.id:
         log.debug(u'Deleting Session: %r', session.items())
@@ -118,7 +117,7 @@ def _reset(context, data_dict):
         raise toolkit.ValidationError({'email': 'invalid email'})
 
     # control attempts (exception raised on fail)
-    _check_reset_attempts(email)
+    _check_reset_attempts(email.encode())
 
     # get existing user from email
     user = util.get_user(email)
@@ -164,11 +163,15 @@ def _login(context, data_dict):
     except KeyError:
         raise toolkit.ValidationError({'email': 'missing email'})
     try:
-        key = data_dict['key']
+        orig_key = data_dict['key']
     except KeyError:
         raise toolkit.ValidationError({'key': 'missing token'})
 
-    log.debug('login: {0} ({1})'.format(user_id, key))
+    if len(orig_key)<=32:
+        key = "b'{0}'".format(orig_key)
+    else:
+        key = orig_key
+    log.debug('login: {0} ({1}) => {2}'.format(user_id, orig_key, key))
 
     # get whether to return context (UI) or just a message (API)
     return_context = data_dict.get('return_context', False)
@@ -202,13 +205,16 @@ def _login(context, data_dict):
     redis_conn = connect_to_redis()
     redis_conn.delete(email)
 
+    # make sure the master API key exists
+    apikey = util.renew_master_token(user_dict['name'])
+
     # return message or context
     if return_context:
         return context
     else:
         user_obj = context.get('user_obj', None)
         result_json = {'user': {'email': user_obj.email, 'id': user_obj.id, 'name': user_obj.name,
-                                'apikey': user_obj.apikey, 'fullname': user_obj.fullname},
+                                'apikey': apikey, 'fullname': user_obj.fullname},
                        'message': "login success"}
         return result_json
 

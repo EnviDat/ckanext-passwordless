@@ -4,6 +4,10 @@ import re
 import datetime
 import uuid
 
+from logging import getLogger
+
+log = getLogger(__name__)
+
 
 def check_email(email):
     if email:
@@ -71,3 +75,33 @@ def generate_password():
     # FIXME: Replace this with a better way of generating passwords, or enable
     # users without passwords in CKAN.
     return str(uuid.uuid4())
+
+
+def renew_master_token(user_name = None):
+
+    log.debug("renew_master_token: Renewing API KEY token **")
+    user = toolkit.c.user
+
+    if user or user_name:
+        # check if there is one already and delete it
+        user_id = user_name if user_name else user.get('id')
+        data_dict = {u'user': user_id}
+        api_keys = toolkit.get_action('api_token_list')(
+            context={'ignore_auth': True},
+            data_dict=data_dict)
+        log.debug("renew_master_token ({1}) api_keys = {0}".format(", ".join([k['name'] for k in api_keys]), data_dict[u'user']))
+        for key in api_keys:
+            if key.get('name') == 'master':
+                log.debug("renew_master_token deleting key = {0}".format(key))
+                toolkit.get_action('api_token_revoke')(
+                    context={'ignore_auth': True},
+                    data_dict={u'jti': key['id']})
+
+        # generate new API KEY for user
+        new_api_key = toolkit.get_action('api_token_create')(
+                context={'ignore_auth': True},
+                data_dict={'user': user_id, 'name': 'master'})
+        log.debug('renew_master_token new API key: {0}'.format(new_api_key))
+        return new_api_key['token']
+    else:
+        return None
