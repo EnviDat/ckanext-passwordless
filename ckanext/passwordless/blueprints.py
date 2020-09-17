@@ -77,8 +77,10 @@ def passwordless_user_login():
     params = {k: v for (k, v) in toolkit.request.form.items() if v and len(v.strip()) > 0}
 
     if 'key' in params.keys():
-        # add the b'<key>' wrapper
-        params['key'] = "b'{0}'".format(params['key'].strip())
+        params['key'] = params['key'].strip()
+        if len(params['key']) <= 32 and not params['key'].startswith("b'"):
+            # add the b'<key>' wrapper
+            params['key'] = "b'{0}'".format(params['key'])
 
     # get the url params too
     for k, v in toolkit.request.args.items():
@@ -227,5 +229,7 @@ def passwordless_perform_reset(id=None):
 
 
 def _login_error_redirect(email='', key='', id=''):
-    log.debug("_login_error_redirect rendering user/login.html")
+    log.debug("_login_error_redirect rendering user/login.html key = {0}".format(key))
+    if key.strip().startswith("b'"):
+        key = key.replace("b'", "").replace("'", "")
     return render('user/login.html', extra_vars={'email': email, 'key': key, 'id': id})

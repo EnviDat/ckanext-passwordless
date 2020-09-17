@@ -167,7 +167,7 @@ def _login(context, data_dict):
     except KeyError:
         raise toolkit.ValidationError({'key': 'missing token'})
 
-    if len(orig_key)<=32:
+    if len(orig_key)<=32 and not orig_key.startswith("b'"):
         key = "b'{0}'".format(orig_key)
     else:
         key = orig_key
@@ -185,7 +185,6 @@ def _login(context, data_dict):
         raise logic.NotFound('"%s" matched several users' % user_id)
     except toolkit.NotAuthorized:
         raise toolkit.NotAuthorized('Exception (Not Authorized) email = ' + str(email) + 'id = ' + str(user_id))
-
     if not user_obj or not mailer.verify_reset_link(user_obj, key):
         raise toolkit.ValidationError({'key': 'token provided is not valid'})
 
