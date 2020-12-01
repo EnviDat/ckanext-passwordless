@@ -94,6 +94,12 @@ def passwordless_user_login():
         log.debug('login: NO params')
         return _login_error_redirect()
 
+    # handle standard redirects
+    came_from = params.get('came_from')
+    if came_from and len(params.keys()) == 1:
+        log.debug("Login: handle came_from redirect to reset")
+        return toolkit.h.redirect_to('user.request_reset', came_from=came_from)
+
     key = params.get('key')
     user_id = params.get('id')
     email = params.get('email', '')
@@ -104,7 +110,7 @@ def passwordless_user_login():
             error_msg = _(u'Login failed (reset key not provided)')
             h.flash_error(error_msg)
         log.debug("email but no key, reload")
-        return _login_error_redirect(email=email)
+        return _login_error_redirect(email=email, came_from=came_from)
 
     # FIXME 403 error for invalid key is a non helpful page
     context = {'model': model, 'session': model.Session,
@@ -115,7 +121,7 @@ def passwordless_user_login():
         if not util.check_email(email):
             error_msg = _(u'Login failed (email not valid)')
             h.flash_error(error_msg)
-            return _login_error_redirect()
+            return _login_error_redirect(came_from=came_from)
         user_id = util.get_user_id(email)
         log.debug('login: id (email) = ' + str(user_id))
 
@@ -127,20 +133,23 @@ def passwordless_user_login():
         )
     except logic.NotFound as e:
         h.flash_error(_('User not found, exception: {0}'.format(e.message)))
-        return _login_error_redirect(email=email, key=key, id=user_id)
+        return _login_error_redirect(email=email, key=key, id=user_id, came_from=came_from)
     except NotAuthorized as e:
         h.flash_error(_('Exception (Not Authorized): {0}'.format(e.message)))
-        return _login_error_redirect(email=email, key=key, id=user_id)
+        return _login_error_redirect(email=email, key=key, id=user_id, came_from=came_from)
     except toolkit.ValidationError as e:
         message = ""
         for k, v in e.error_dict.items():
             message += " validation of field {0} failed: {1}".format(k, v)
         h.flash_error(_('ValidationError: {0}'.format(message)))
-        return _login_error_redirect(email=email, key=key, id=user_id)
+        return _login_error_redirect(email=email, key=key, id=user_id, came_from=came_from)
 
     debug_msg = _(u'Successfully logged in ({0}).'.format(context['user_obj'].name))
     h.flash_success(debug_msg)
-    return toolkit.h.redirect_to(config.get(u'ckan.route_after_login', u'dashboard.index'))
+    if came_from:
+        return toolkit.h.redirect_to(came_from)
+    else:
+        return toolkit.h.redirect_to(config.get(u'ckan.route_after_login', u'dashboard.index'))
 
 
 def passwordless_request_reset():
@@ -168,15 +177,33 @@ def passwordless_request_reset():
     if request.method == 'POST':
 
         # Get the params that were posted
-        params = toolkit.request.form
+        form_params = toolkit.request.form
+        params = {}
+        for k, v in form_params.items():
+            if v:
+                params[k] = v
+
+        # get the url params too
+        for k, v in toolkit.request.args.items():
+            if v:
+                params[k] = v
+
+        log.debug('request_rest: params = ' + str(params))
+
         email = params.get('email')
+        came_from = params.get('came_from')
+
+        # prepare extra vars
+        extra_vars = {'email': email}
+        if came_from:
+            extra_vars['came_from'] = came_from
 
         if params:
             # error if no mail
             if not util.check_email(email):
                 error_msg = _(u'Please introduce a valid mail.')
                 h.flash_error(error_msg)
-                return render('user/request_reset.html', extra_vars={'email': email})
+                return render('user/request_reset.html', extra_vars=extra_vars)
 
             # Check captcha
             try:
@@ -184,7 +211,7 @@ def passwordless_request_reset():
             except captcha.CaptchaError:
                 error_msg = _(u'Bad Captcha. Please try again.')
                 h.flash_error(error_msg)
-                return render('user/request_reset.html', extra_vars={'email': email})
+                return render('user/request_reset.html', extra_vars=extra_vars)
 
             # call action
             try:
@@ -199,18 +226,18 @@ def passwordless_request_reset():
             except toolkit.ValidationError as e:
                 error_msg = _(u'Reset failed {0}. Please try again.'.format(str(e)))
                 h.flash_error(error_msg)
-                return render('user/request_reset.html', extra_vars={'email': email})
+                return render('user/request_reset.html', extra_vars=extra_vars)
             except toolkit.NotAuthorized:
                 return render('user/logout_first.html')
             except logic.NotFound as e:
                 error_msg = _(u'Reset failed, problem retrieving the user associated to the email {0}.'.format(e))
                 h.flash_error(error_msg)
-                return render('user/request_reset.html', extra_vars={'email': email})
+                return render('user/request_reset.html', extra_vars=extra_vars)
             except mailer.MailerException as e:
                 h.flash_error(_('Could not send token link: %s') % str(e))
 
-        log.debug("controller redirecting: user.login, email =  " + str(email))
-        return toolkit.h.redirect_to('user.login', email=email)
+        log.debug("controller redirecting: user.login, email =  " + str(email) + ", came_from = " + str(came_from))
+        return toolkit.h.redirect_to('user.login', email=email, came_from=came_from)
 
     return render('user/request_reset.html')
 
@@ -224,12 +251,28 @@ def passwordless_perform_reset(id=None):
         return render('user/logout_first.html')
 
     key = request.params.get('key')
+    came_from = request.params.get('came_from')
 
-    return toolkit.h.redirect_to('user.login', id=id, key=key)
+    return toolkit.h.redirect_to('user.login', id=id, key=key, came_from=came_from)
 
 
-def _login_error_redirect(email='', key='', id=''):
+def _login_error_redirect(email='', key='', id='', came_from=''):
     log.debug("_login_error_redirect rendering user/login.html key = {0}".format(key))
-    if key.strip().startswith("b'"):
-        key = key.replace("b'", "").replace("'", "")
-    return render('user/login.html', extra_vars={'email': email, 'key': key, 'id': id})
+
+    extra_vars = {}
+
+    if email:
+        extra_vars['email'] = email
+
+    if key:
+        if key.strip().startswith("b'"):
+            key = key.replace("b'", "").replace("'", "")
+        extra_vars['key'] = key
+
+    if id:
+        extra_vars['id'] = id
+
+    if came_from:
+        extra_vars['came_from'] = came_from
+
+    return render('user/login.html', extra_vars=extra_vars)
