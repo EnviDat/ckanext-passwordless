@@ -6,7 +6,7 @@ from ckan.lib.navl.dictization_functions import DataError
 import ckan.lib.helpers as h
 
 from ckanext.passwordless import util
-from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link
+from ckanext.passwordless.passwordless_mailer import passwordless_send_reset_link, passwordless_send_welcome_email
 from ckan.common import request, session, g
 from logging import getLogger
 
@@ -230,6 +230,8 @@ def _create_user(email):
         user = toolkit.get_action('user_create')(
             context={'ignore_auth': True},
             data_dict=data_dict)
+        #log.debug("_create_user: user = {0}".format(user))
+        passwordless_send_welcome_email(user)
     except sqlalchemy.exc.InternalError as error:
         exception_message = "{0}".format(error)
         log.error("failed to create user: {0}".format(error))
@@ -309,6 +311,7 @@ def _set_repoze_user_only(user_id):
         resp = h.redirect_to(u'user.me')
         resp.headers.extend(rememberer.remember(request.environ, identity))
         log.debug("cookie set")
+
 
 def _check_reset_attempts(email):
     redis_conn = connect_to_redis()

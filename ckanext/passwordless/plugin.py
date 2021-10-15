@@ -21,10 +21,6 @@ class PasswordlessPlugin(plugins.SingletonPlugin):
         toolkit.add_template_directory(config_, 'templates')
         toolkit.add_public_directory(config_, 'public')
 
-    def after_map(self, map_):
-        # log.debug(map_)
-        return map_
-
     # IAuthenticator
     def identify(self):
         """Identify which user (if any) is logged-in 

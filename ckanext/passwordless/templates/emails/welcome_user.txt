@@ -1,0 +1,21 @@
+
+Dear {{ user_fullname }},
+
+Welcome to {{ site_title }}!
+
+In order to get an overview about EnviDat please read our guidelines ({{ site_url }}/#/about/guidelines) and policies ({{ site_url }}/#/about/policies).
+
+Please note that uploading and publishing data is currently restricted to {{ site_org }} employees and their collaborators.
+If you are a WSL employee or collaborator please ask your group leader or data manager to contact {{ email_to }} for confirming you as {{ site_title }} data provider.
+
+External users can still use their {{ site_title }} login to request and receive access to restricted data.
+
+If you have any questions, you can gladly ask them at {{ email_to }} – one of our support team members will be glad to answer them.
+
+Hope that you'll find {{ site_title }} useful!
+
+Best Regards,
+Your {{ site_title }} team
+
+--
+Message sent by {{ site_title }} ({{ site_url }})
