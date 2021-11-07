@@ -97,10 +97,10 @@ def renew_master_token(user_name = None):
                     context={'ignore_auth': True},
                     data_dict={u'jti': key['id']})
 
-        # generate new API KEY for user
+        # generate new API KEY for user that lasts 7 days
         new_api_key = toolkit.get_action('api_token_create')(
                 context={'ignore_auth': True},
-                data_dict={'user': user_id, 'name': 'master'})
+                data_dict={'user': user_id, 'name': 'master', 'expires_in': 7, 'unit': 86400})
         log.debug('renew_master_token new API key: {0}'.format(new_api_key))
         return new_api_key['token']
     else:
