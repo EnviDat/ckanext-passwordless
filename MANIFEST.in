@@ -1,4 +1,4 @@
 include README.rst
 include LICENSE
 include requirements.txt
-recursive-include ckanext/passwordless *.html *.json *.js *.less *.css *.mo *.sql
+recursive-include ckanext/passwordless *.txt *.html *.json *.js *.less *.css *.mo *.sql
